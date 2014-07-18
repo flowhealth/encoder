@@ -155,11 +155,30 @@ func copyStruct(v reflect.Value) reflect.Value {
 }
 
 func iterateSlice(v reflect.Value) reflect.Value {
-	result := reflect.MakeSlice(v.Type(), 0, v.Len())
+	t := v.Type()
+
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+
+	result := reflect.MakeSlice(t, 0, v.Len())
 
 	for i := 0; i < v.Len(); i++ {
 		value := v.Index(i)
-		result = reflect.Append(result, copyStruct(value))
+		var fv reflect.Value
+
+		switch value.Type().Kind() {
+		case reflect.Slice:
+			fv = iterateSlice(value)
+
+		case reflect.Struct:
+			fv = copyStruct(value)
+
+		default:
+			fv = value
+		}
+
+		result = reflect.Append(result, fv)
 	}
 
 	return result
